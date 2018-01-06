@@ -22,7 +22,7 @@ class PyException : public exception
 public:
     PyException(const string& desc) : m_desc(desc)
     {}
-    virtual const char* what() const {
+    virtual const char* what() const noexcept {
         return m_desc.c_str();
     }
 

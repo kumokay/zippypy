@@ -22,7 +22,7 @@ using namespace std;
 struct TestAssert : public exception
 {
     TestAssert(const string& desc) :m_desc(desc) {}
-    virtual const char* what() const {
+    virtual const char* what() const noexcept {
         return m_desc.c_str();
     }
     string m_desc;
@@ -163,7 +163,12 @@ inline void runAllTests()
     consoleSetColor(CONSOLE_GRAY);
 }
 
-#define FAIL() do { ostringstream ss; ss << __LINE__ << " Failed"; reportFailed(ss.str()); } while(false)
+#include <cassert>
+//#define FAIL() do { ostringstream ss; ss << __LINE__ << " Failed"; reportFailed(ss.str()); } while(false)
+#define FAIL() do { \
+    ostringstream ss; ss << __LINE__ << " Failed"; reportFailed(ss.str()); \
+    assert(0); \
+} while(false)
 
 #define TEST_DO_THROW throw TestAssert
 #define TEST_DO_REPORT reportFailed
@@ -197,9 +202,12 @@ inline void runAllTests()
 
 #define COMMON_NO_THROW(cmd, action) do { \
    ostringstream ss; \
+   cmd; \
+} while (0)
+/*
    try { cmd; } \
    catch(...) { ss << __LINE__ << ": " "Statement `" << #cmd "` Threw something "; action(ss.str()); } \
-} while(false)
+} while(false)*/
 #define ASSERT_NO_THROW(cmd) COMMON_NO_THROW(cmd, TEST_DO_THROW)
 #define EXPECT_NO_THROW(cmd) COMMON_NO_THROW(cmd, TEST_DO_REPORT)
 

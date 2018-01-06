@@ -77,12 +77,33 @@ struct BoolObject : public Object {
     bool v;
 };
 
+/*
 struct IntObject : public Object {
     IntObject(uint _v) :Object(INT), v(_v) {}
     IntObject(int _v) :Object(INT), v(_v) {}
     IntObject(int64 _v) :Object(INT), v(_v) {}
     IntObject(uint64 _v) :Object(INT) { *(uint64*)&v = _v; } // copy the binary value
     int64 v;
+};*/
+
+struct IntObject : public Object {
+    IntObject(int _v) :Object(INT), v(_v) {}
+    int v;
+};
+
+struct UIntObject : public Object {
+    UIntObject(uint _v) :Object(UINT), v(_v) {}
+    uint v;
+};
+
+struct Int64Object : public Object {
+    Int64Object(int64 _v) :Object(INT64), v(_v) {}
+    int64 v;
+};
+
+struct UInt64Object : public Object {
+    UInt64Object(uint64 _v) :Object(UINT64), v(_v) {}
+    uint64 v;
 };
 
 struct FloatObject : public Object {
@@ -173,22 +194,6 @@ struct MapIterObject : public IteratorObject, public IIterable
     PyVM *m_vm;
 };
 
-
-template<typename T>
-struct MapKeyValueIterObject : public MapIterObject<T> 
-{
-    MapKeyValueIterObject(const PoolPtr<T>& l, PyVM* vm) : MapIterObject(l, vm)	{}
-    virtual bool next(ObjRef& obj) {
-        if(i == of->v.end())
-            return false;
-        auto t = m_vm->alloct(new TupleObject);
-        t->append(m_vm->makeFromT(i->first));
-        t->append(i->second);
-        obj = ObjRef(t);
-        ++i;
-        return true;
-    }
-};
 
 
 // T is the this type: ListObject, StrObject etc'
@@ -295,10 +300,11 @@ struct StrExtension
     const string* v;
     string iv; // lower case ansi
     string pathv; // path-normalized ansi
+#if (defined(_WIN32) || defined(_WIN64))
     wstring wv; // wide-char cache
     wstring wiv; // lower case wide-char
     wstring wpathv; // path-normalized wide-char
-
+#endif
     string* getStr(StrModifier mod) {
         if (mod == STRMOD_CASEI) {
             if (!has_iv) {
@@ -316,6 +322,7 @@ struct StrExtension
         }*/
         THROW("Unexpected string (StrE) modifier" << mod);
     }
+#if (defined(_WIN32) || defined(_WIN64))
     wstring* getWStr(StrModifier mod) {
         if (!has_wv) { // need to make wv anyway
             wv = wstrFromAnsi(*v);
@@ -340,6 +347,7 @@ struct StrExtension
         }*/
         THROW("Unexpected wstring (StrE) modifier" << mod);
     }
+#endif
 
 };
 
@@ -366,20 +374,21 @@ struct StrObject : public StrBaseObject, public GenericIterable<StrObject>, publ
             ext.reset(new StrExtension(&v));
         return ext->getStr(mod);
     }
-
+#if (defined(_WIN32) || defined(_WIN64))
     const wstring* getWStr(StrModifier mod) {
         // STRs are immutable so it's ok to cache it once
         if (ext.get() == nullptr)
             ext.reset(new StrExtension(&v));
         return ext->getWStr(mod);
     }
+#endif
 
     string v;
     std::unique_ptr<StrExtension> ext;    
 };
 typedef PoolPtr<StrObject> StrObjRef;
 
-
+#if (defined(_WIN32) || defined(_WIN64))
 // various caches for an StrObject (ansi)
 struct UnicodeExtension
 {
@@ -452,7 +461,7 @@ struct UnicodeObject : public StrBaseObject, public GenericIterable<UnicodeObjec
     wstring v;
     std::unique_ptr<UnicodeExtension> ext;
 };
-
+#endif
 
 struct ListObject : public Object, public GenericSubscriptable<ListObject, ObjRef>, public GenericIterable<ListObject> 
 {
@@ -492,6 +501,31 @@ struct TupleObject : public ListObject {
 typedef PoolPtr<TupleObject> TupleObjRef;
 
 
+template<typename T>
+struct MapKeyValueIterObject : public MapIterObject<T> 
+{
+    MapKeyValueIterObject(const PoolPtr<T>& l, PyVM* vm) : MapIterObject<T>(l, vm)  {}
+    virtual bool next(ObjRef& obj) {
+        // get base class vars
+        auto& i = this->i;
+        auto& of = this->of;
+        auto& m_vm = this->m_vm;
+
+        if(i == of->v.end())
+            return false;
+        auto t = m_vm->alloct(new TupleObject);
+        t->append(m_vm->makeFromT(i->first));
+        t->append(i->second);
+        obj = ObjRef(t);
+        ++i;
+        return true;
+    }
+};
+
+
+
+
+
 
 //BOOST_STATIC_ASSERT(sizeof(int16) == sizeof(wchar_t));
 
@@ -499,22 +533,27 @@ typedef PoolPtr<TupleObject> TupleObjRef;
 
 template<typename PT>
 struct PObjType;
+//template<> struct PObjType<size_t>    { typedef UInt64Object ot; };
 template<> struct PObjType<short int> { typedef IntObject ot; };
 template<> struct PObjType<int>       { typedef IntObject ot; };
-template<> struct PObjType<uint>      { typedef IntObject ot; };
-template<> struct PObjType<int64>     { typedef IntObject ot; };
-template<> struct PObjType<uint64>    { typedef IntObject ot; };
+template<> struct PObjType<uint>      { typedef UIntObject ot; };
+template<> struct PObjType<int64>     { typedef Int64Object ot; };
+template<> struct PObjType<long int>    { typedef Int64Object ot; };
+template<> struct PObjType<long unsigned int>    { typedef UInt64Object ot; };
+template<> struct PObjType<uint64>    { typedef UInt64Object ot; };
 template<> struct PObjType<bool>   { typedef BoolObject ot; };
 template<> struct PObjType<string>        { typedef StrObject ot; };
 template<> struct PObjType<string&>       { typedef StrObject ot; }; 
 template<> struct PObjType<const string&> { typedef StrObject ot; }; 
 template<> struct PObjType<const char*>   { typedef StrObject ot; };
 template<> struct PObjType<char>          { typedef StrObject ot; };  // single character -> string
+#if (defined(_WIN32) || defined(_WIN64))
 template<> struct PObjType<wstring>        { typedef UnicodeObject ot; };
 template<> struct PObjType<wstring&>       { typedef UnicodeObject ot; };
 template<> struct PObjType<const wstring&> { typedef UnicodeObject ot; };
 template<> struct PObjType<const wchar_t*> { typedef UnicodeObject ot; };
 template<> struct PObjType<wchar_t>        { typedef UnicodeObject ot; };
+#endif
 template<> struct PObjType<double> { typedef FloatObject ot; };
 template<> struct PObjType<float>  { typedef FloatObject ot; };
 
@@ -529,26 +568,53 @@ template<typename ET> struct PObjType< std::vector<ET> >  { typedef ListObject o
 
 template<typename T>
 inline void Object::checkTypeT() {
-    checkType(Object::typeValue<POBJ_TYPE(T)>());   
+    checkType(Object::typeValue<POBJ_TYPE(T)>());
 }
 
 // these are needed instead of extract<> since template instantiation of function template does not take the template argument
 template<typename T>
 struct Extract {
     T operator()(const ObjRef& o) {
+        // cout << "Extract from obj type " << o->type << " to " << Object::typeValue<POBJ_TYPE(T)>() << endl;
         CHECK(!o.isNull(), "Extract from nullptr ref");
         o->checkTypeT<T>();
         return (T)static_cast<POBJ_TYPE(T)*>(o.get())->v;
     }
 };
 // some special cases are below
+
 template<> struct Extract<uint64> {
-    int64 operator()(const ObjRef& o) {
+    uint64 operator()(const ObjRef& o) {
+        cout << "Extract from obj type " << o->type << " to uint64" << endl;
         CHECK(!o.isNull(), "Extract from nullptr ref");
-        o->checkType(Object::INT);
-        return *(uint64*)&static_cast<IntObject*>(o.get())->v;
+        o->checkType(Object::UINT64);
+        uint64 n = 0;
+        if  (o->type == Object::INT)
+            n = (uint64) static_cast<IntObject*>(o.get())->v;
+        else if (o->type == Object::UINT)
+            n = (uint64) static_cast<UIntObject*>(o.get())->v;
+        else
+            n = (uint64) static_cast<UInt64Object*>(o.get())->v;
+        return n;
     }
 };
+
+template<> struct Extract<int64> {
+    int64 operator()(const ObjRef& o) {
+        cout << "Extract from obj type " << o->type <<  " to int64" << endl;
+        CHECK(!o.isNull(), "Extract from nullptr ref");
+        o->checkType(Object::INT64);
+        int64 n = 0;
+        if  (o->type == Object::INT)
+            n = (int64) static_cast<IntObject*>(o.get())->v;
+        else if (o->type == Object::UINT)
+            n = (int64) static_cast<UIntObject*>(o.get())->v;
+        else
+            n = (int64) static_cast<Int64Object*>(o.get())->v;
+        return n;
+    }
+};
+
 template<> struct Extract<char> {
     char operator()(const ObjRef& o) {
         CHECK(!o.isNull(), "Extract from nullptr ref");
@@ -564,6 +630,8 @@ template<> struct Extract<char> {
         THROW("Extract<char> unexpectyed type:" << o->typeName());
     }
 };
+
+#if (defined(_WIN32) || defined(_WIN64))
 template<> struct Extract<wchar_t> {
     wchar_t operator()(const ObjRef& o) {
         CHECK(!o.isNull(), "Extract from nullptr ref");
@@ -579,12 +647,13 @@ template<> struct Extract<wchar_t> {
         THROW("Extract<wchar_t> unexpectyed type:" << o->typeName());
     }
 };
+#endif
 
 template<> struct Extract<double> {
     double operator()(const ObjRef& o) {
         CHECK(!o.isNull(), "Extract from nullptr ref");
         if (o->type == Object::INT) {
-            return (double)static_cast<IntObject*>(o.get())->v;
+            return (double)static_cast<IntObject*>(o.get())->v;  // assume int32
         }
         if (o->type == Object::FLOAT) {
             return static_cast<FloatObject*>(o.get())->v;
@@ -613,6 +682,7 @@ template<>
 inline const string* extractStrPtr(const ObjRef& o, StrModifier mod) {
     return checked_cast<StrObject>(o)->getStr(mod);
 }
+#if (defined(_WIN32) || defined(_WIN64))
 template<> 
 inline const wstring* extractStrPtr(const ObjRef& o, StrModifier mod) {
     CHECK(!o.isNull(), "Extract from nullptr ref");
@@ -631,7 +701,7 @@ template<> struct Extract<wstring> {
         return *extractStrPtr<wchar_t>(o, STRMOD_NONE);
     }
 };
-
+#endif
 
 
 template<typename T> 

@@ -81,10 +81,15 @@ public:
         vm.reset(new PyVM);
         vm->setStdout(&std::cout);
 
-        s_path = "./";
+        s_path = "./test/";
         
         vm->importPycFile(s_path + "imped_module.pyc");
+        cout << "imped_module" << endl;
+
         mod = vm->importPycFile(s_path + "test_module.pyc");
+
+        cout << "test_module" << endl;
+
         ASSERT_FALSE(mod.isNull());
 
        // s_interp.init();
@@ -127,9 +132,15 @@ string ctest3(int a, string b) {
     return "XX";
 }
 
+#if (defined(_WIN32) || defined(_WIN64))
 void ctest4(float f, const wstring& wa) {
     cout << "C f=" << f << " wa=" << ansiFromwstr(wa) << endl;
 }
+#else
+void ctest4(float f, const string& wa) {
+    cout << "sorry, no wstring support in linux so far" << endl;
+}
+#endif
 
 void ctest5(const vector<ObjRef>& v) {
     cout << "C v5=" << v.size() << endl;
@@ -361,15 +372,25 @@ TEST_F(PyVMTest, numbers_conversion)
     EXPECT_EQ(extract<uint64>(n), 0xAF00000000000000);
 
     EXPECT_NO_THROW( vm->call("test_module.checkNumber", 11, (int)HKLM_SIGNED_VAL) ); 
+    cout << (int)HKLM_SIGNED_VAL << endl;
     EXPECT_NO_THROW( vm->call("test_module.checkNumber", 11, (int64)HKLM_SIGNED_VAL) ); 
+    // NOT SUPPORT NON INT OPERATION NOW
+    cout << (int64)HKLM_SIGNED_VAL << endl;
 
     EXPECT_NO_THROW( vm->call("test_module.checkNumber", 12, (int64)0x100000000) ); 
+    cout << (int64)0x100000000 << endl;
+
     EXPECT_NO_THROW( vm->call("test_module.checkNumber", 12, (uint64)0x100000000) ); 
+    cout << (uint64)0x100000000 << endl;
 
     EXPECT_NO_THROW( vm->call("test_module.checkNumber", 13, (int64)0x7F00000000000000) ); 
+    cout << (int64)0x7F00000000000000 << endl;
+
     EXPECT_NO_THROW( vm->call("test_module.checkNumber", 13, (uint64)0x7F00000000000000) ); 
+    cout << (uint64)0x7F00000000000000 << endl;
 
     EXPECT_NO_THROW( vm->call("test_module.checkNumber", 14, (uint64)0xAF00000000000000) ); 
+    cout << (uint64)0xAF00000000000000 << endl;
 
 
 }
@@ -389,7 +410,13 @@ T extractInt(const string& s, int start) {
 
 TEST_F(PyVMTest, AccessBuffer_usecases) {
     try {
-        char *envp[] = {"HellO", "CrueL", "WorlD", 0 };
+        char envpstr[][32] = {"HellO", "CrueL", "WorlD", 0 };
+        char* str[4];
+        str[0] = envpstr[0];
+        str[1] = envpstr[1];
+        str[2] = envpstr[2];
+        str[3] = envpstr[3];
+        char** envp = (char**) &str;
 
         vm->addBuiltin(AccessBuffer::addToModule(vm->mainModule()));
         vm->addBuiltin(BufferBuilder::addToModule(vm->mainModule()));
@@ -397,6 +424,7 @@ TEST_F(PyVMTest, AccessBuffer_usecases) {
         vm->call("test_module.parseCharArray", (size_t)envp); // calls charArrCall
         EXPECT_EQ((char**)g_got_v, envp); // pointer received by the callback should be the same as envp
 
+        // cannot support string
         string buf;
         buf.resize(15);
         EXPECT_NO_THROW( vm->call("test_module.testAccessBuf", buf) ); 
@@ -413,9 +441,19 @@ TEST_F(PyVMTest, AccessBuffer_usecases) {
         EXPECT_EQ(666,   extractInt<uint>(rs, 3*sizeof(void*) + sizeof(uint64)));
         EXPECT_EQ(111,   extractInt<char>(rs, 3*sizeof(void*) + sizeof(uint64) + sizeof(uint)));
 
+        cout << "haha" << endl;
+
         int argc = 4;
-        char* argv[4] = { "HellO", "WORLD", "TeST", "this" };
-        char* origargv[4] = { argv[0], argv[1], argv[2], argv[3] };
+        char argvstr[][32] = { "HellO", "WORLD", "TeST", "this" };
+        char* str2[4];
+        str2[0] = argvstr[0];
+        str2[1] = argvstr[1];
+        str2[2] = argvstr[2];
+        str2[3] = argvstr[3];
+        char** argv = (char**) &str2;
+
+        char origargv[][32] = { "HellO", "WORLD", "TeST", "this" };
+
         vm->call("test_module.testArgcArgv", argc, (size_t)argv);
         EXPECT_STREQ("HellO", origargv[0]); // it didn't change the content
         EXPECT_STREQ("hello", argv[0]); // it changed the pointer
@@ -607,7 +645,7 @@ TEST_F(PyVMTest, string_slice) {
 
 TEST_F(PyVMTest, import_callback) {
     vm->setImportCallback([](const string& name) {
-        auto p = unique_ptr<istream>(new ifstream("./" + name + ".pyc", ios::binary));
+        auto p = unique_ptr<istream>(new ifstream("./test/" + name + ".pyc", ios::binary));
         CHECK(p->good(), "Failed opening module " << name);
         return make_pair(std::move(p), true);        
     });

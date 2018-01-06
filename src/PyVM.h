@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <functional>
+#include <algorithm>  // for reverse
 #include <vector>
 #include <map>
 #include <sstream>
@@ -105,7 +106,9 @@ public:
     }
     vector<T> data() { // for testers
         vector<T> r;
-        m_stack.foreach([&](const T& v) { r.push_back(v); });
+        //m_stack.foreach([&](const T& v) { r.push_back(v); });
+        auto f = [&](const T& v) { r.push_back(v); };
+        m_stack.foreach(f);
         //r = m_stack;
         return r; 
     }

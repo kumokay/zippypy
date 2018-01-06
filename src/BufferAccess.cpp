@@ -9,6 +9,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "BufferAccess.h"
+#include <cstring>
+#include <cstdlib>
 
 
 #define CATCH_ACCESS_VIOLATION(func) catch(const exception&) { throw; }\
@@ -21,7 +23,14 @@ ObjRef AccessBuffer::readNum() {
         T v = 0;
         memcpy(&v, m_p + m_offset, sizeof(T));
         m_offset += sizeof(T);
-        return m_vm->alloc(new IntObject(v));
+        switch(sizeof(T))
+        {
+            case 1: return m_vm->alloc(new IntObject(v));
+            case 2: return m_vm->alloc(new IntObject(v)); 
+            case 4: return m_vm->alloc(new IntObject(v));
+            case 8: return m_vm->alloc(new Int64Object(v));
+            default: THROW("can't readNum, sizeof(T) " << sizeof(T));
+        }
     } CATCH_ACCESS_VIOLATION(readNum)
 }
 template<typename T>
@@ -60,6 +69,7 @@ ObjRef AccessBuffer::readBuf(int len) {
         return m_vm->makeFromT(s);
     } CATCH_ACCESS_VIOLATION(readBuf)
 }
+#if (defined(_WIN32) || defined(_WIN64))
 ObjRef AccessBuffer::readWCStr(){ 
     try {
         int count = (int)wcslen((wchar_t*)(m_p + m_offset));
@@ -70,6 +80,7 @@ ObjRef AccessBuffer::readWCStr(){
         return m_vm->makeFromT(s);
     } CATCH_ACCESS_VIOLATION(readWCStr)
 }
+#endif
 
 void AccessBuffer::writePtr(const ObjRef& v) {
     writeNum<size_t>(v);
@@ -111,7 +122,9 @@ ClassObjRef AccessBuffer::addToModule(const ModuleObjRef& mod) {
     cls->def(&AccessBuffer::readPtr, "readPtr");
     cls->def(&AccessBuffer::readInt, "readInt");
     cls->def(&AccessBuffer::readCStr, "readCStr");
+#if (defined(_WIN32) || defined(_WIN64))
     cls->def(&AccessBuffer::readWCStr, "readWCStr");
+#endif
     cls->def(&AccessBuffer::readBuf, "readBuf");
 
 	cls->def(&AccessBuffer::writeCStr, "writeCStr");
@@ -125,7 +138,7 @@ ClassObjRef AccessBuffer::addToModule(const ModuleObjRef& mod) {
     cls->def(&AccessBuffer::seekBytes, "seekBytes");
     cls->addMember(mod->m_vm->makeFromT((int)ORIGIN_BEG), "ORIGIN_BEG");
     cls->addMember(mod->m_vm->makeFromT((int)ORIGIN_CUR), "ORIGIN_CUR");
-    cls->addMember(mod->m_vm->makeFromT(sizeof(void*)), "SIZEOF_PTR");
+    cls->addMember(mod->m_vm->makeFromT((int)sizeof(void*)), "SIZEOF_PTR");
 
     return cls;
 }

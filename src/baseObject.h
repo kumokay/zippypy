@@ -51,7 +51,6 @@ public:
     enum Type {
         NONE = 0,
         BOOL = 1,
-        INT = 2,
         STR = 3,
         TUPLE = 4,
         LIST = 5,
@@ -72,7 +71,11 @@ public:
         GENERATOR = 20,
         CFUNC_WRAP = 21,
         SLICE = 22,
-        XRANGE = 23
+        XRANGE = 23,
+        INT = 0x100,
+        UINT = 0x101,
+        INT64 = 0x102,
+        UINT64 = 0x103
     };
     enum TypeProp {
         IATTRABLE = 1, // see tryAs<IAttrable>
@@ -121,7 +124,28 @@ public:
     static Object::Type typeValue();
 
     inline void checkType(Object::Type t) {
-        CHECK(type == t, "wrong type expected:" << typeName(t) << " got:" << typeName());
+        switch(t)
+        {
+            case INT:
+            case UINT:
+            case INT64:
+            case UINT64:
+            {
+                switch(type)
+                {
+                    case INT:
+                    case UINT:
+                    case INT64:
+                    case UINT64:
+                      return;
+                }
+            }
+        }
+        /* INT = 0x100,
+        UINT = 0x101,
+        INT64 = 0x102,
+        UINT64 = 0x103 */
+        CHECK(type == t, "wrong type expected:" << typeName(t) << " got:" << typeName() << ":(");
     }
     inline void checkProp(Object::TypeProp p) {
         CHECK(checkFlag(typeProp, (int)p) == true, "wrong prop expected:" << typeProp << " got:" << p);

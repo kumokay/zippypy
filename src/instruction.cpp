@@ -152,9 +152,14 @@ bool OpImp::compare(const ObjRef& lhsref, const ObjRef& rhsref, int op)
     if (lhs->type == rhs->type) {
         switch (lhs->type) {
         case Object::INT:  return compareType<IntObject>(lhs, rhs, op);
+        case Object::UINT:  return compareType<UIntObject>(lhs, rhs, op);
+        case Object::INT64:  return compareType<Int64Object>(lhs, rhs, op);
+        case Object::UINT64:  return compareType<UInt64Object>(lhs, rhs, op);
         case Object::BOOL: return compareType<BoolObject>(lhs, rhs, op);
         case Object::STR:  return compareStrType<StrObject>(lhs, rhs, op);
+#if (defined(_WIN32) || defined(_WIN64))
         case Object::USTR: return compareStrType<UnicodeObject>(lhs, rhs, op);
+#endif
         case Object::TUPLE:
         case Object::LIST: return compareList((ListObject*)lhs, (ListObject*)rhs, op);
         case Object::FLOAT:return compareType<FloatObject>(lhs, rhs, op);
@@ -164,6 +169,7 @@ bool OpImp::compare(const ObjRef& lhsref, const ObjRef& rhsref, int op)
             return (lhs == rhs) == opHasEq(op);  // for all other types, reference compare
         }
     }
+#if (defined(_WIN32) || defined(_WIN64))
     if (lhs->type == Object::USTR && rhs->type == Object::STR) {
         ObjRef urhs = UnicodeObject::fromStr(rhsref, vm);
         return compareStrType<UnicodeObject>(lhs, urhs.get(), op);
@@ -172,6 +178,7 @@ bool OpImp::compare(const ObjRef& lhsref, const ObjRef& rhsref, int op)
         ObjRef ulhs = UnicodeObject::fromStr(lhsref, vm);
         return compareStrType<UnicodeObject>(ulhs.get(), rhs, op);
     }
+#endif
     if ((lhs->type == Object::FLOAT && rhs->type == Object::INT) ) {
         FloatObject floatRhs((float)((IntObject*)rhs)->v);
         return compareType<FloatObject>(lhs, &floatRhs, op);
@@ -279,9 +286,14 @@ void print_recurse(const ObjRef& vref, ostream& out, RecurionTracker& tracker, b
     switch (v->type) {
     case Object::NONE: out << "None"; break;
     case Object::INT:  out << ((IntObject*)v)->v; break;
+    case Object::UINT:  out << ((UIntObject*)v)->v; break;
+    case Object::INT64:  out << ((Int64Object*)v)->v; break;
+    case Object::UINT64:  out << ((UInt64Object*)v)->v; break;
     case Object::BOOL: out << ( ((BoolObject*)v)->v ? "True" : "False" ); break;
     case Object::STR:  out << printStr(((StrObject*)v)->v, repr, 0); break;
+#if (defined(_WIN32) || defined(_WIN64))
     case Object::USTR: out << utf8FromWstr( printStr(((UnicodeObject*)v)->v, repr, 'u')); break;
+#endif
     case Object::FLOAT:out << ((FloatObject*)v)->v; break;
     case Object::CODE: out << ((CodeObject*)v)->m_co.co_name; break;
     case Object::MODULE: out << ((ModuleObject*)v)->m_name; break;
@@ -388,11 +400,17 @@ ObjRef OpImp::add(const ObjRef& lhsref, const ObjRef& rhsref) {
     if (lhs->type == rhs->type) {
         switch (rhs->type) {
         case Object::INT:   return addType<IntObject>(lhs, rhs);
+        case Object::UINT:   return addType<UIntObject>(lhs, rhs);
+        case Object::INT64:   return addType<Int64Object>(lhs, rhs);
+        case Object::UINT64:   return addType<UInt64Object>(lhs, rhs);
         case Object::FLOAT: return addType<FloatObject>(lhs, rhs);
         case Object::STR:   return addType<StrObject>(lhs, rhs);
+#if (defined(_WIN32) || defined(_WIN64))
         case Object::USTR:  return addType<UnicodeObject>(lhs, rhs);
+#endif
         }
     }
+#if (defined(_WIN32) || defined(_WIN64))
     if (lhs->type == Object::STR && rhs->type == Object::USTR) {
         UnicodeObject ulhs( ((StrObject*)lhs)->v, ENC_ASCII );
         return addType<UnicodeObject>(&ulhs, rhs);
@@ -401,6 +419,7 @@ ObjRef OpImp::add(const ObjRef& lhsref, const ObjRef& rhsref) {
         UnicodeObject urhs( ((StrObject*)rhs)->v, ENC_ASCII );
         return addType<UnicodeObject>(lhs, &urhs);
     }
+#endif
     if ((lhs->type == Object::FLOAT && rhs->type == Object::INT) ) {
         FloatObject floatRhs((float)((IntObject*)rhs)->v);
         return addType<FloatObject>(lhs, &floatRhs);
@@ -428,6 +447,9 @@ ObjRef OpImp::mult(const ObjRef& lhsref, const ObjRef& rhsref) {
     if (lhs->type == rhs->type) {
         switch (rhs->type) {
         case Object::INT:    return multType<IntObject>(lhs, rhs);
+        case Object::UINT:    return multType<UIntObject>(lhs, rhs);
+        case Object::INT64:    return multType<Int64Object>(lhs, rhs);
+        case Object::UINT64:    return multType<UInt64Object>(lhs, rhs);
         case Object::FLOAT:  return multType<FloatObject>(lhs, rhs);
         }
     }
@@ -437,12 +459,14 @@ ObjRef OpImp::mult(const ObjRef& lhsref, const ObjRef& rhsref) {
     if (lhs->type == Object::STR && rhs->type == Object::INT) {
         return multStr<char>(lhs, rhs);
     }
+#if (defined(_WIN32) || defined(_WIN64))
     if (lhs->type == Object::INT && rhs->type == Object::USTR) {
         return multStr<wchar_t>(rhs, lhs);
     }
     if (lhs->type == Object::USTR && rhs->type == Object::INT) {
         return multStr<wchar_t>(lhs, rhs);
     }
+#endif
     if ((lhs->type == Object::FLOAT && rhs->type == Object::INT) ) {
         FloatObject floatRhs((float)((IntObject*)rhs)->v);
         return multType<FloatObject>(lhs, &floatRhs);
@@ -460,6 +484,9 @@ ObjRef OpImp::sub(const ObjRef& lhsref, const ObjRef& rhsref) {
     if (lhs->type == rhs->type) {
         switch (rhs->type) {
         case Object::INT:    return subType<IntObject>(lhs, rhs);
+        case Object::UINT:    return subType<UIntObject>(lhs, rhs);
+        case Object::INT64:    return subType<Int64Object>(lhs, rhs);
+        case Object::UINT64:    return subType<UInt64Object>(lhs, rhs);
         case Object::FLOAT:  return subType<FloatObject>(lhs, rhs);
         }
     }
@@ -480,6 +507,9 @@ ObjRef OpImp::div(const ObjRef& lhsref, const ObjRef& rhsref) {
     if (lhs->type == rhs->type) {
         switch (rhs->type) {
         case Object::INT:    return divType<IntObject>(lhs, rhs);
+        case Object::UINT:    return divType<UIntObject>(lhs, rhs);
+        case Object::INT64:    return divType<Int64Object>(lhs, rhs);
+        case Object::UINT64:    return divType<UInt64Object>(lhs, rhs);
         case Object::FLOAT:  return divType<FloatObject>(lhs, rhs);
         }
     }
@@ -505,6 +535,7 @@ ObjRef OpImp::uminus(const ObjRef& argref) {
     Object *arg = argref.get();
     switch (arg->type) {
     case Object::INT:    return minusType<IntObject>(arg);
+    case Object::INT64:  return minusType<Int64Object>(arg);
     case Object::FLOAT:  return minusType<FloatObject>(arg);
     }
     THROW("Can't unary negative");
@@ -527,7 +558,9 @@ static int64 intLen(const ObjRef& argref) {
     case Object::DICT:  return lenType<DictObject>(arg);
     case Object::STRDICT:  return lenType<StrDictObject>(arg);
     case Object::STR:   return lenType<StrObject>(arg);
+#if (defined(_WIN32) || defined(_WIN64))
     case Object::USTR:  return lenType<UnicodeObject>(arg);
+#endif
     default:
     THROW("not len for type " << arg->typeName());
     }
@@ -552,7 +585,9 @@ ObjRef OpImp::int_(const ObjRef& arg) {
     int64 i = 0;
     switch (arg->type) {
     case Object::STR:   i = lexical_cast(static_pcast<StrObject>(arg)->v); break;
+#if (defined(_WIN32) || defined(_WIN64))
     case Object::USTR:  i = lexical_cast(static_pcast<UnicodeObject>(arg)->v); break;
+#endif
     case Object::BOOL:  i = static_pcast<BoolObject>(arg)->v ? 1 : 0; break;
     case Object::FLOAT: i = (int64)(static_pcast<FloatObject>(arg)->v); break;
     default:
@@ -572,8 +607,13 @@ ObjRef OpImp::bool_(const ObjRef& arg) {
     bool b;
     switch (arg->type) {
     case Object::STR:   b = boolFromStr(static_pcast<StrObject>(arg)->v); break;
+#if (defined(_WIN32) || defined(_WIN64))
     case Object::USTR:  b = boolFromStr(static_pcast<UnicodeObject>(arg)->v); break;
+#endif
     case Object::INT:   b = (static_pcast<IntObject>(arg)->v == 0) ? false : true; break;
+    case Object::UINT:   b = (static_pcast<UIntObject>(arg)->v == 0) ? false : true; break;
+    case Object::INT64:   b = (static_pcast<Int64Object>(arg)->v == 0) ? false : true; break;
+    case Object::UINT64:   b = (static_pcast<UInt64Object>(arg)->v == 0) ? false : true; break;
     case Object::FLOAT: b = (static_pcast<FloatObject>(arg)->v == 0.0) ? false : true; break;
     case Object::NONE:  b = false; break;
     case Object::LIST:
@@ -628,6 +668,29 @@ static int64 notMinusOne(int64 h) {
     return h;
 }
 
+int64 getObjIntVal(ObjRef arg)
+{
+    int64 n = 0;
+    switch (arg->type) {
+        case Object::INT: 
+            n = (int64)(checked_cast<IntObject>(arg))->v;
+            break;
+        case Object::UINT: 
+            n = (int64)(checked_cast<UIntObject>(arg))->v;
+            break;
+        
+        case Object::INT64: 
+            n = (int64)(checked_cast<Int64Object>(arg))->v;
+            break;
+        case Object::UINT64: 
+            n = (int64)(checked_cast<UInt64Object>(arg))->v;
+            break;
+        default:
+            THROW("getObjIntVal fail");
+    }
+    return n;
+}
+
 int64 hashNum(const Object* arg) {
     if (arg == nullptr || arg->type == Object::NONE) {
         return 0x1234; // here None and nullptr object are treated the same
@@ -639,6 +702,14 @@ int64 hashNum(const Object* arg) {
         int64 n = ((IntObject*)arg)->v;
         return notMinusOne(n);
     }
+    case Object::UINT: {
+        int64 n = ((UIntObject*)arg)->v;
+        return notMinusOne(n);
+    }
+    case Object::INT64: {
+        int64 n = ((Int64Object*)arg)->v;
+        return notMinusOne(n);
+    }
     case Object::FLOAT: {
         double f = ((FloatObject*)arg)->v;
         double ip = 0.0;
@@ -647,7 +718,9 @@ int64 hashNum(const Object* arg) {
         else 
             return notMinusOne(*(int64*)&f);
     }
+#if (defined(_WIN32) || defined(_WIN64))
     case Object::USTR:
+#endif
     case Object::STR: { // same as CPython
         const StrBaseObject* s = (StrBaseObject*)arg;
         if (s->size() == 0)
@@ -1003,12 +1076,15 @@ void Frame::doOpcode( SetObjCallback& setObj )
     case INPLACE_LSHIFT: {
         ObjRef b = pop();
         ObjRef a = pop();
-        int64 ret = binOp(checked_cast<IntObject>(a)->v, checked_cast<IntObject>(b)->v, ins.opcode);
-        push(m_vm->alloc(new IntObject(ret)));
+
+        // int64 ret = binOp(checked_cast<Int64Object>(a)->v, checked_cast<Int64Object>(b)->v, ins.opcode);
+        int64 ret = binOp(getObjIntVal(a), getObjIntVal(b), ins.opcode);
+        push(m_vm->alloc(new Int64Object(ret)));
         break;
     }
     case UNARY_INVERT: // bitwise not, operator ~
-        push(m_vm->alloc(new IntObject( ~ checked_cast<IntObject>(pop())->v)));
+        // push(m_vm->alloc(new Int64Object( ~ /*checked_cast<Int64Object>*/(pop())->v)));
+        push(m_vm->alloc(new Int64Object( ~ getObjIntVal(pop()))));
         break;       
     case LIST_APPEND: { // for list comprehension
         ListObjRef lst = checked_cast<ListObject>(m_stack.peek(ins.param));
@@ -1120,7 +1196,6 @@ int checkVmVersion(int req) {
     return vmVersion();
 }
 
-
 // works only for IAttrables at the moment
 ObjRef getattr(const vector<ObjRef>& args) {
     CHECK(args.size() == 2 || args.size() == 3, "getattr expects 2 or 3 arguments, got " << args.size());
@@ -1138,7 +1213,7 @@ ObjRef getattr(const vector<ObjRef>& args) {
 }
 
 
-ObjRef round(CallArgs& args, PyVM* vm) {
+ObjRef myround(CallArgs& args, PyVM* vm) {
     CHECK(args.pos.size() == 1 , "round expects 1 argument, got " << args.pos.size());
     ObjRef arg = args[0];
     double res;
@@ -1153,6 +1228,7 @@ ObjRef round(CallArgs& args, PyVM* vm) {
     }
     
     THROW("Invalid object type for round func '" << arg->typeName() << "'");
+    return vm->makeFromT(0);;
 }
 
 
@@ -1321,7 +1397,7 @@ Builtins::Builtins(PyVM* vm)
     defIc("hex", makeOpImpCWrap(&OpImp::hex, m_vm));
     defIc("int", makeOpImpCWrap(&OpImp::int_, m_vm));
     defIc("bool", makeOpImpCWrap(&OpImp::bool_, m_vm));
-    def("round", round);
+    def("round", myround);
     def("strdict", strdict);
     def("staticmethod", staticmethod);
     def("xrange", xrange);
@@ -1331,9 +1407,11 @@ Builtins::Builtins(PyVM* vm)
     addGlobal(ObjRef(emptyClass("AttributeError")), "AttributeError");
     def("vmVersion", vmVersion);
     def("checkVmVersion", checkVmVersion);
+#if (defined(_WIN32) || defined(_WIN64))
     def("msecTime", msecTime);
 	def("debugBreak", debugBreak);
 	def("MessageBoxCall", MessageBoxCall);
+#endif
 //    defIc("runtime_import", makeOpImpCWrap(&OpImp::runtime_import, m_vm));
     def("type", type_);
 }

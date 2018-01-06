@@ -13,8 +13,13 @@
 
 #define DISALLOW_COPY_AND_ASSIGN(Cls) private: Cls(const Cls&) = delete; Cls& operator=(const Cls&) = delete;
 
+#if (defined(_WIN32) || defined(_WIN64))
 typedef unsigned __int64 uint64;
 typedef signed __int64 int64;
+#else
+typedef unsigned long long uint64;
+typedef signed long long int64;
+#endif
 typedef unsigned short ushort;
 typedef unsigned char uchar;
 typedef unsigned int uint;

@@ -10,6 +10,7 @@
 // limitations under the License.
 #pragma once
 #include "objects.h"
+#include <cstdlib>
 
 // used for raw memory access from python
 // write into and read from an existing buffer of memory
@@ -34,7 +35,9 @@ public:
     // read a nullptr terminated string from the buffer
     ObjRef readCStr();
     ObjRef readBuf(int len);
+#if (defined(_WIN32) || defined(_WIN64))
     ObjRef readWCStr();
+#endif
 	void writeCStr(const string& s);
 
     // set the cursor to a position in the buffer
@@ -73,7 +76,7 @@ public:
         return (int)m_buf.size();
     }
     size_t c_ptr() {
-        return (size_t)m_buf.data();
+        return (size_t) m_buf.data();
     }
     string str() {
         return m_buf;

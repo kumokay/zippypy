@@ -172,7 +172,6 @@ def testList():
 
 
 def checkNumber(i, arg):
-    print "i=", i, "arg=", arg
     if i == 1:
         return -2147483646  # HKEY_LOCAL_MACHINE = FFFFFFFF80000002
     if i == 2:
@@ -182,17 +181,13 @@ def checkNumber(i, arg):
     if i == 4:
         return 0xAF00000000000000
     if i == 11:
-        # TRUE(arg == -2147483646)
-        print arg == -2147483646
+        TRUE(arg == -2147483646)
     if i == 12:
-        #TRUE(arg == 4294967296)   # 0x100000000
-        print arg == 4294967296
+        TRUE(arg == 4294967296)   # 0x100000000
     if i == 13:
-        #TRUE(arg == 0x7F00000000000000)
-        print arg == 4294967296
+        TRUE(arg == 0x7F00000000000000)
     if i == 14:
-        #TRUE(arg == 0xAF00000000000000)
-        print arg == 0xAF00000000000000
+        TRUE(arg == 0xAF00000000000000)
     
     
 def testCircular():
@@ -335,7 +330,6 @@ def testIs():
         
         
 def testBuiltInFuncs():
-    print "testBuiltInFuncs"
     EQ(len([1,2,3]), 3)
     EQ(len((True, 5)), 2)
     EQ(len('bla_bla'), 7)
@@ -834,7 +828,6 @@ def parseCharArray(envp):
  
 def testAccessBuf(s): 
     wbuf = AccessBuffer(s.c_ptr())
-
     wbuf.writeInt(1, 100)
     #wbuf.writeInt(2, 200)
     wbuf.writeInt(4, 300)
@@ -871,13 +864,12 @@ def testAccessBuf(s):
         EQ(b, "ABCD")
     else:
         FAIL("unexpected SIZEOF_PTR")
-    print "seekBuf OK1"
         
     #wxs = u"abcd\u0000efg\u0000"
-    #rbuf = AccessBuffer(wxs.c_ptr())
-    #a = rbuf.readWCStr();
+    rbuf = AccessBuffer(wxs.c_ptr())
+    a = rbuf.readWCStr();
     #EQ(a, u"abcd")
-    #b = rbuf.readWCStr()
+    b = rbuf.readWCStr()
     #EQ(b, u"efg")
     
     

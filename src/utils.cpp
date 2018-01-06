@@ -8,8 +8,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include <windows.h>
 #include "utils.h"
+
+#if (defined(_WIN32) || defined(_WIN64))
+#include <windows.h>
+
+// does not support string ext in linux std
 
 bool wstrFromUtf8(const string& s, wstring *out) {
     if (s.empty()) {
@@ -49,6 +53,8 @@ string ansiFromwstr(const wstring& s) {
         out.append(1, (char)c); // not correct at all
     return out;
 }
+#endif
+
 
 #define SLASHES "/\\"
 
@@ -67,6 +73,7 @@ string extractFileNameWithoutExtension(const string& path) {
 }
 
 
+#if (defined(_WIN32) || defined(_WIN64))
 uint64 msecTime(){
     return GetTickCount();
 }
@@ -81,3 +88,8 @@ void MessageBoxCall() {
 void consoleSetColor(int col) {
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), col);
 }
+#else
+void consoleSetColor(int col) {
+    
+}
+#endif

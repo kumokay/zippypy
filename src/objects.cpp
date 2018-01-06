@@ -12,6 +12,7 @@
 #include "objects.h"
 #include "PyVM.h"
 #include "OpImp.h"
+#include <cstring>
 
 
 using namespace std;
@@ -21,6 +22,9 @@ const char* Object::typeName(Type type) {
     case NONE:  return "NoneType";
     case BOOL:  return "bool";
     case INT:   return "int";
+    case UINT:   return "uint";
+    case INT64:   return "int64";
+    case UINT64:   return "uint64";
     case STR:   return "str";
     case TUPLE: return "tuple";
     case LIST:  return "list";
@@ -46,7 +50,10 @@ static Object::Type typeValue() {
 #define MAKE_TYPEVALUE(obj, val) template<> Object::Type Object::typeValue<obj >()   { return Object::val; }
 MAKE_TYPEVALUE(BoolObject, BOOL)
 MAKE_TYPEVALUE(StrObject,   STR)
-MAKE_TYPEVALUE(IntObject,   INT)
+MAKE_TYPEVALUE(IntObject, INT)
+MAKE_TYPEVALUE(UIntObject, UINT)
+MAKE_TYPEVALUE(Int64Object, INT64)
+MAKE_TYPEVALUE(UInt64Object, UINT64)
 MAKE_TYPEVALUE(TupleObject, TUPLE)
 MAKE_TYPEVALUE(ListObject,  LIST)
 MAKE_TYPEVALUE(DictObject, DICT)
@@ -60,7 +67,9 @@ MAKE_TYPEVALUE(InstanceObject, INSTANCE)
 MAKE_TYPEVALUE(MethodObject, METHOD)
 MAKE_TYPEVALUE(IteratorObject, ITERATOR)
 //MAKE_TYPEVALUE(GenericIterObject, ITERATOR)
+#if (defined(_WIN32) || defined(_WIN64))
 MAKE_TYPEVALUE(UnicodeObject, USTR)
+#endif
 MAKE_TYPEVALUE(Object, NONE)
 MAKE_TYPEVALUE(FloatObject, FLOAT)
 MAKE_TYPEVALUE(SliceObject, SLICE)
@@ -123,11 +132,11 @@ int ISubscriptable::extractIndex(const ObjRef& key, size_t size) {
 }
 
 //------------------------------------------------------------------------------------------
-
+#if (defined(_WIN32) || defined(_WIN64))
 ObjRef UnicodeObject::fromStr(const ObjRef& s, PyVM* vm) {
     return vm->alloc(new UnicodeObject(checked_dynamic_pcast<StrObject>(s)));
 }
-
+#endif
 ObjRef ClassObject::attr(const string& name) {
     ObjRef v = tryLookup(m_dict->v, name);
     if (!v.isNull())
@@ -385,15 +394,15 @@ ObjRef PrimitiveAttrAdapter::stringMethod(const ObjRef& obj, const CallArgs::TPo
 
 // if anything is unicode, everything should be unicode
 ObjRef PrimitiveAttrAdapter::stringMethodConv(const ObjRef& obj, CallArgs::TPosVector& args) {
+#if (defined(_WIN32) || defined(_WIN64))
     bool uni = obj->type == Object::USTR;
     for(auto ait = args.begin(); !uni && ait != args.end(); ++ait)
         uni |= (*ait)->type == Object::USTR;
-    if (!uni)
-        return stringMethod<char>(obj, args);
-    // otherwise, conver all strings to unicode
-
-    return stringMethod<wchar_t>(obj, args);
+    if (uni) return stringMethod<wchar_t>(obj, args);
+#endif
+    return stringMethod<char>(obj, args);
 }
+
 
 ObjRef PrimitiveAttrAdapter::listMethod(const ObjRef& obj, CallArgs::TPosVector& args) {
     auto l = static_pcast<ListObject>(obj);
@@ -455,7 +464,9 @@ ObjRef PrimitiveAttrAdapter::call(Frame& from, Frame& frame, int posCount, int k
     
     switch (m_obj->type) {
     case Object::STR:
+#if (defined(_WIN32) || defined(_WIN64))
     case Object::USTR:
+#endif
         return stringMethodConv(m_obj, args.pos);
     case Object::LIST:
         return listMethod(m_obj, args.pos);

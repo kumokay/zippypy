@@ -15,17 +15,20 @@
 
 using namespace std;
 
+#if defined(_WIN32) || defined(_WIN64)
 bool wstrFromUtf8(const string& s, wstring *out);
 wstring wstrFromAnsi(const string& s);
 string ansiFromwstr(const wstring& s);
-
 string utf8FromWstr(const wstring& s);
+#endif
 
 string extractFileNameWithoutExtension(const string& s);
 
+#if (defined(_WIN32) || defined(_WIN64))
 uint64 msecTime();
 void debugBreak();
 void MessageBoxCall();
+#endif
 
 #define CONSOLE_GREEN 10
 #define CONSOLE_RED 12
@@ -34,10 +37,11 @@ void consoleSetColor(int col);
 
 
 
+
 template<typename TC>
 basic_string<TC> toLower(const basic_string<TC>& s) {
     basic_string<TC> c(s);
-    transform(c.begin(), c.end(), c.begin(), tolower);
+    transform(c.begin(), c.end(), c.begin(), (int (*)(int))std::tolower );  // specific overload requested);
     return c;
 }
 

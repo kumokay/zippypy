@@ -111,12 +111,14 @@ ObjRef parseNext(Deserialize& s, PyVM* vm)
         }
         return vm->makeFromT(h < 0 ? -res : res);
     }
+#if (defined(_WIN32) || defined(_WIN64))
     case 'u': { // utf8 unicode
         uint sz = s.read<uint>(); 
         wstring us;
         CHECK(wstrFromUtf8(s.readStr(sz), &us), "Failed reading UTF8");
         return vm->makeFromT(us); 
     }
+#endif
     case '{':
     case '>':
     case 'y': // binary complex

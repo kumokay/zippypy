@@ -46,7 +46,9 @@ TEST(VarArray, realloc_movedCorrectly)
 template<typename T, typename FT>
 vector<T> toVector(const FT& from) {
     vector<T> r;
-    from.foreach([&](const T& v) { r.push_back(v); });
+    // from.foreach([&](const T& v) { r.push_back(v); });
+    auto f = [&](const T& v) { r.push_back(v); };
+    from.foreach(f);
     return r;
 }
 template<typename FT>
@@ -246,30 +248,39 @@ TEST(VarArray, insert_allDestroyed)
     v.push_back(str_ptr(new string("11")));
     v.push_back(str_ptr(new string("22")));
     v.insert(v.begin() + 1, str_ptr(new string("000")));
-    v.foreach([](const str_ptr& p) {
+
+    /*v.foreach([](const str_ptr& p) {
         ASSERT_EQ(p.use_count(), 1);
-    });
+    });*/
+    auto f = [](const str_ptr& p) {
+        ASSERT_EQ(p.use_count(), 1);
+    };
+    v.foreach(f);
+    
     v.insert(v.begin() + 1, str_ptr(new string("333")));
     v.insert(v.end(), str_ptr(new string("444")));
-    v.foreach([](const str_ptr& p) {
+    /*v.foreach([](const str_ptr& p) {
         ASSERT_EQ(p.use_count(), 1);
-    });
+    });*/
+    v.foreach(f);
 
     v.insert(v.end() - 1, str_ptr(new string("555")));
     v.insert(v.end() - 1, str_ptr(new string("666")));
     v.insert(v.end() - 1, str_ptr(new string("777")));
 
-    v.foreach([](const str_ptr& p) {
+    /*v.foreach([](const str_ptr& p) {
         ASSERT_EQ(p.use_count(), 1);
-    });
+    });*/
+    v.foreach(f);
 
     v.pop_back();
     v.pop_back();
     v.pop_back();
 
-    v.foreach([](const str_ptr& p) {
+    /*v.foreach([](const str_ptr& p) {
         ASSERT_EQ(p.use_count(), 1);
-    });
+    });*/
+    v.foreach(f);
 }
 
 

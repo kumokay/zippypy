@@ -48,7 +48,7 @@ public:
     ObjRef len(const ObjRef& arg);
 
     ObjRef hash(const ObjRef& arg) {
-        return vm->alloc(new IntObject(hashNum(arg)));
+        return vm->alloc(new Int64Object(hashNum(arg)));
     }
     ObjRef str(const ObjRef& arg) {
         return vm->alloc(new StrObject(stdstr(arg, false)));
@@ -57,7 +57,8 @@ public:
         return vm->alloc(new StrObject(stdstr(arg, true)));
     }
     ObjRef hex(const ObjRef& n) {
-        int64 num = checked_cast<IntObject>(n)->v;
+        // int64 num = checked_cast<Int64Object>(n)->v;
+        int num = checked_cast<IntObject>(n)->v;
         stringstream ss; ss << "0x" << std::hex << num;
         return vm->alloc(new StrObject(ss.str()));
     }
